@@ -50,16 +50,50 @@
 #define K0_EIN		(PORTC |= (1<<PC6))
 #define K0_TOGGLE	(PORTC ^= (1<<PC6))
 
+#define MILIS 10	//10 * milis = 1 sek
+#define SEK 600		//max delay_s Zeit -> 10 min 
 
-volatile unsigned int cnt = 0;
+volatile unsigned int milis = 0; 	// millisekunden = milis*100
 volatile unsigned int sek = 0;
-volatile char flanke = 0;
+volatile char m_flanke = 0;
 volatile char contine = 0;
 
+struct merker_t {
+   uint16_t time = 0;
+   uint8_t flanke = 0;
+} merker[5];
 
 ISR(TIMER1_OVF_vect){
-	TCNT1 = 53036;
-	cnt++;
+	TCNT1 = 53036;		//aller 0,1s wird ISR ausgeführt
+	milis++;
+}
+
+unsigned char delay_s(unsigned int  throld, merker_t *m) {
+          if (!m->flanke) {
+                  m->flanke = 1;
+                  if ((sek + throld) >= SEK)
+                          m->time = sek + throld - SEK;
+                  else
+                          m->time = sek + throld;
+          }
+          if (sek == m->time) {
+                  return 1;
+          }
+          return 0;
+}
+
+unsigned char delay_ms(unsigned int  throld, merker_t *m) {
+          if (!m->flanke) {
+                  m->flanke = 1;
+                  if ((milies + throld) >= MILIS)
+                          m->time = milies + throld - MILIS;
+                  else
+                          m->time = milies + throld;
+          }
+          if (milies == m->time) {
+                  return 1;
+          }
+          return 0;
 }
 
 unsigned char compareTime(unsigned int throld, unsigned int cur_time, unsigned int last_time) {
@@ -68,7 +102,7 @@ unsigned char compareTime(unsigned int throld, unsigned int cur_time, unsigned i
 
 	if(cur_time >= (last_time + throld))
 		return 1;
-	else if((cur_time >= (last_time + throld - 10)) && cnt % 2) {
+	else if((cur_time >= (last_time + throld - 10)) && milis % 2) {
 		LED_K0_TOGGLE;
 		contine = 1;
 	}
@@ -105,96 +139,78 @@ int main( void )
 	SPCR |= (1 << SPE) | (1 << CPHA); // Slave, SPI enable
 
 	int i=0;
-	unsigned char time = 0;
+	unsigned char m_time = 0;
+
+
+	struct merker[5] = {
+		unsigned int m_time_a;
+ 	       	unsigned char m_flanke_a;
+	}
 
 
 //Endlosschleife
 while(1)
 {
 
-	if(cnt >= 10) {
-		cnt = 0;
+	if(milis >= MILIS) {
+		milis = 0;
 		sek++;
-		if(sek == 600)
+		if(sek == SEK)
 			sek = 0;
 	}
 
 	i=SPDR;
 
-	if( i==1)	{W9_EIN;}
+	if(i==1)	{W9_EIN;}
 
-	if( i==2)	{W10_EIN;}
+	if(i==2)	{W10_EIN;}
 
 
-	if( i==3)	{W11_EIN;}
+	if(i==3)	{W11_EIN;}
 
-	if( i==4)	{W12_AUS;W13_EIN;}
+	if(i==4)	{W12_AUS;W13_EIN;}
 
-	if( i==5)	{W9_AUS;}
+	if(i==5)	{W9_AUS;}
 
-	if( i==6)	{W10_AUS;}
+	if(i==6)	{W10_AUS;}
 
-	if( i==7)	{W11_AUS;}
+	if(i==7)	{W11_AUS;}
 
-	if( i==8)	{W12_EIN;W13_AUS;}
+	if(i==8)	{W12_EIN;W13_AUS;}
 
-	if((!TS0 && !(flanke & 1)) || (!TS0 && contine)) {
+	if((!TS0 && !(m_flanke & 1)) || (!TS0 && contine)) {
 		_delay_ms(100);
-		flanke |= 1; 
+		m_flanke |= 1; 
 		K0_TOGGLE; LED_K0_TOGGLE;KS11_AUS;KS21_AUS;KS22_AUS;KS24_AUS;
-		time = sek;
+		m_time = sek;
 		contine = 0;
 		_delay_ms(255);
 	}
-	if( TS0 && (flanke & 1)) 
-		flanke &= 0xfe;
+	if( TS0 && (m_flanke & 1)) 
+		m_flanke &= 0xfe;
 	
 
-	if( TS11 )	{_delay_ms(255);if( TS11 ){KS11_TOGGLE;LED_K0_AUS;K0_AUS;}}
+	if(TS11){	if(delay_ms(3,&merker[0]))	{KS11_TOGGLE;LED_K0_AUS;K0_AUS;}}
+	else		merker[0].flanke = 0;
 
-	if( TS21 )	{_delay_ms(255);if( TS21 ){KS21_TOGGLE;LED_K0_AUS;K0_AUS;}}
+	if(TS21){	if(delay_ms(3,&merker[1])) 	{KS21_TOGGLE;LED_K0_AUS;K0_AUS;}}
+	else		merker[1].flanke = 0;
 
-	if( TS22 )	{_delay_ms(255);if( TS22 ){KS22_TOGGLE;LED_K0_AUS;K0_AUS;}}
+	if(TS22){	if(delay_ms(3,&merker[2]))	{KS22_TOGGLE;LED_K0_AUS;K0_AUS;}}
+	else		merker[2].flanke = 0;
 
-	if( TS24 )	{_delay_ms(255);if( TS24 ){KS24_TOGGLE;LED_K0_AUS;K0_AUS;}}
+	if(TS24){	if(delay_ms(3,&merker[3]))	{KS24_TOGGLE;LED_K0_AUS;K0_AUS;}}
+	else		merker[3].flanke = 0;
 
-	if(compareTime(120, sek, time)) {
+#if 0	//Rangierfahrt nach einer bestimmten Zeit beenden
+	if(compareTime(120, sek, m_time)) {
 		K0_AUS;
 		LED_K0_AUS;
 	}
+#endif
 	
 }
 
 
 return(0);
 }
-
-
-/*
-	if( BIT_1 && !BIT_2)	{_delay_ms(255);W9_EIN;}
-	else {_delay_ms(255);W9_AUS;}
-	if( BIT_2)	{_delay_ms(255);W10_EIN;}
-	else {_delay_ms(255);W10_AUS;}
-	if( BIT_3)	{_delay_ms(255);W11_EIN;}
-	else {_delay_ms(255);W11_AUS;}
-	if( BIT_4)	{_delay_ms(255);W12_AUS;W13_EIN;}
-	else {_delay_ms(255);W12_EIN;W13_AUS;}
-*/
-
-/*
-	if( BIT_1) && !BIT_2 && !BIT_3 && !BIT_4  )	{W9_AUS;}
-
-	if( !BIT_1 && BIT_2 && !BIT_3 && !BIT_4  )	{W10_EIN;}
-
-	if( BIT_1 && BIT_2 && !BIT_3 && !BIT_4  )	{W11_AUS;}
-
-	if( !BIT_1 && !BIT_2 && BIT_3 && !BIT_4  )	{W12_AUS;}
-
-	if( BIT_1 && !BIT_2 && BIT_3 && !BIT_4  )	{W13_AUS;}
-
-_delay_ms(255);_delay_ms(255);
-	PORTD &= ~(1<<PD0);PORTD &= ~(1<<PD1);PORTD &= ~(1<<PD2);PORTD &= ~(1<<PD3);PORTD &= ~(1<<PD4);
-	_delay_ms(255);_delay_ms(255);
-	PORTD |= (1<<PD0);PORTD |= (1<<PD1);PORTD |= (1<<PD2);PORTD |= (1<<PD3);PORTD |= (1<<PD4);
-	_delay_ms(255);_delay_ms(255);
-*/
