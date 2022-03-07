@@ -59,18 +59,20 @@ volatile char m_flanke = 0;
 volatile char contine = 0;
 
 struct merker_t {
-   uint16_t time = 0;
-   uint8_t flanke = 0;
-} merker[5];
+   unsigned int time;
+   char flanke;			//Bit0=Tasten Merker | Bit1=Timer Merker
+} merker[5];			//TS11, TS12, TS22, TS24
+
+typedef struct merker_t MERKER;
 
 ISR(TIMER1_OVF_vect){
 	TCNT1 = 53036;		//aller 0,1s wird ISR ausgeführt
 	milis++;
 }
 
-unsigned char delay_s(unsigned int  throld, merker_t *m) {
-          if (!m->flanke) {
-                  m->flanke = 1;
+unsigned char delay_s(unsigned int  throld, MERKER *m) {
+          if (!m->flanke & 1) {
+                  m->flanke |= 3;
                   if ((sek + throld) >= SEK)
                           m->time = sek + throld - SEK;
                   else
@@ -82,15 +84,16 @@ unsigned char delay_s(unsigned int  throld, merker_t *m) {
           return 0;
 }
 
-unsigned char delay_ms(unsigned int  throld, merker_t *m) {
-          if (!m->flanke) {
-                  m->flanke = 1;
-                  if ((milies + throld) >= MILIS)
-                          m->time = milies + throld - MILIS;
+unsigned char delay_ms(unsigned int  throld, MERKER *m) {
+          if (!m->flanke & 1) {
+                  m->flanke |= 3;
+                  if ((milis + throld) >= MILIS)
+                          m->time = milis + throld - MILIS;
                   else
-                          m->time = milies + throld;
+                          m->time = milis + throld;
           }
-          if (milies == m->time) {
+          if (milis == m->time && m->flanke & 2) {
+		  		  m->flanke &= ~2;
                   return 1;
           }
           return 0;
@@ -142,12 +145,6 @@ int main( void )
 	unsigned char m_time = 0;
 
 
-	struct merker[5] = {
-		unsigned int m_time_a;
- 	       	unsigned char m_flanke_a;
-	}
-
-
 //Endlosschleife
 while(1)
 {
@@ -178,6 +175,7 @@ while(1)
 
 	if(i==8)	{W12_EIN;W13_AUS;}
 
+#if 0
 	if((!TS0 && !(m_flanke & 1)) || (!TS0 && contine)) {
 		_delay_ms(100);
 		m_flanke |= 1; 
@@ -188,8 +186,16 @@ while(1)
 	}
 	if( TS0 && (m_flanke & 1)) 
 		m_flanke &= 0xfe;
-	
+#else
+	if(TS0){	
+		if(delay_ms(3,&merker[4])) {
+		K0_TOGGLE; LED_K0_TOGGLE;KS11_AUS;KS21_AUS;KS22_AUS;KS24_AUS;
+		}
+	}
+	else merker[4].flanke = 0;
+#endif
 
+//Problem: flanke wird nur zum Zeit aufziehen verwendet aber nicht das der Taster dauerhaft gedrückt wird
 	if(TS11){	if(delay_ms(3,&merker[0]))	{KS11_TOGGLE;LED_K0_AUS;K0_AUS;}}
 	else		merker[0].flanke = 0;
 
