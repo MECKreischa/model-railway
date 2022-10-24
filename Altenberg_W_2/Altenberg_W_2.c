@@ -52,7 +52,7 @@
 #define K0_STATE    !(PINC & 1<<PC6)
 
 #define MILIS 10	//10 * milis = 1 sek
-#define SEK 600		//max delay_s Zeit -> 10 min
+#define SEK 600		//max delay_s Zeit -> 10 min 
 
 volatile unsigned int milis = 0; 	// millisekunden = milis*100
 volatile unsigned int sek = 0;
@@ -75,7 +75,7 @@ ISR(TIMER1_OVF_vect){
 //max delay_s Zeit -> 10 min 
 unsigned char delay_s(unsigned int  throld, MERKER *m) {
 		  m->warn = 0;
-		  if (sek <= m->time - 10)
+		  if (sek >= m->time - 10)
 				  m->warn = 1;
           if (!m->flanke & 1) {
                   m->flanke |= 3;
@@ -90,7 +90,7 @@ unsigned char delay_s(unsigned int  throld, MERKER *m) {
 		  m->warn = 0;
                   return 1;
           }
-
+ 
           return 0;
 }
 
@@ -172,7 +172,7 @@ while(1)
 
 	if(i==8)	{W12_EIN;W13_AUS;}
 
-	if(TS0){	if(delay_ms(3,&merker[4]))	{K0_TOGGLE; LED_K0_TOGGLE; KS11_AUS;KS21_AUS;KS22_AUS;KS24_AUS;}}
+	if(TS0){	if(delay_ms(3,&merker[4]))	{K0_EIN; KS11_AUS;KS21_AUS;KS22_AUS;KS24_AUS;}}
 	else		merker[4].flanke = 0;
 
 //Problem: flanke wird nur zum Zeit aufziehen verwendet aber nicht das der Taster dauerhaft gedrückt wird
@@ -190,16 +190,33 @@ while(1)
 
 	//if(!K0_STATE){	{KS11_EIN;}}
 	//if(K0_STATE){	{KS11_AUS;}}
+	
+	if(!K0_STATE){
 
-	if(!K0_STATE){	
+		//reenable K0
+		if(merker[5].warn){
+				if(TS0){	if(delay_ms(3,&merker[4])) {merker[5].flanke = 0;merker[5].time += 10;K0_EIN;}}
+		}
+
+
 		unsigned char tmp = delay_s(120,&merker[5]);
 		if(tmp) {K0_AUS;}
 		//LED Toggeln geht noch nicht!!! 9.9.22 noch nicht im git!!!
-		//if(!merker[5].warn && sek % 2) LED_K0_TOGGLE;
+
+
+
+		if(merker[5].warn && sek % 2) {
+				LED_K0_AUS;
+		}
+		else LED_K0_EIN;
 	}
 
 				//if(delay_s(59,&merker[5]))	{LED_K0_AUS;K0_AUS;KS11_EIN;}}
-	else		merker[5].flanke = 0;
+	else{		
+		merker[5].flanke = 0;
+		LED_K0_AUS;
+	}
+
 	
 	//else LED_K0_AUS;
 	
