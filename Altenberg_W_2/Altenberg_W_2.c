@@ -6,7 +6,7 @@
 #include <inttypes.h>
 
 
-#define TS0      (PINA & 1<<PA0)	//Relais Rangierfahrt
+#define TS0      !(PINA & 1<<PA0)	//Relais Rangierfahrt
 #define TS11     !(PINA & 1<<PA1)	//Relais Signal Gleis 11
 #define TS21     !(PINA & 1<<PA2)
 #define TS22     !(PINA & 1<<PA3)
@@ -49,9 +49,10 @@
 #define K0_AUS  	(PORTC &= ~(1<<PC6))		
 #define K0_EIN		(PORTC |= (1<<PC6))
 #define K0_TOGGLE	(PORTC ^= (1<<PC6))
+#define K0_STATE    !(PINC & 1<<PC6)
 
 #define MILIS 10	//10 * milis = 1 sek
-#define SEK 600		//max delay_s Zeit -> 10 min 
+#define SEK 600		//max delay_s Zeit -> 10 min
 
 volatile unsigned int milis = 0; 	// millisekunden = milis*100
 volatile unsigned int sek = 0;
@@ -61,7 +62,8 @@ volatile char contine = 0;
 struct merker_t {
    unsigned int time;
    char flanke;			//Bit0=Tasten Merker | Bit1=Timer Merker
-} merker[5];			//TS11, TS12, TS22, TS24
+   char warn;
+} merker[6];			//TS11, TS12, TS22, TS24
 
 typedef struct merker_t MERKER;
 
@@ -70,20 +72,29 @@ ISR(TIMER1_OVF_vect){
 	milis++;
 }
 
+//max delay_s Zeit -> 10 min 
 unsigned char delay_s(unsigned int  throld, MERKER *m) {
+		  m->warn = 0;
+		  if (sek <= m->time - 10)
+				  m->warn = 1;
           if (!m->flanke & 1) {
                   m->flanke |= 3;
-                  if ((sek + throld) >= SEK)
+                  if ((sek + throld) >= SEK) {
                           m->time = sek + throld - SEK;
-                  else
+				  }
+                  else {
                           m->time = sek + throld;
+   				  }
           }
           if (sek == m->time) {
+		  m->warn = 0;
                   return 1;
           }
+
           return 0;
 }
 
+//1/10 milis -> 10 * milis = 1 sek
 unsigned char delay_ms(unsigned int  throld, MERKER *m) {
           if (!m->flanke & 1) {
                   m->flanke |= 3;
@@ -98,20 +109,6 @@ unsigned char delay_ms(unsigned int  throld, MERKER *m) {
           }
           return 0;
 }
-
-unsigned char compareTime(unsigned int throld, unsigned int cur_time, unsigned int last_time) {
-	if(cur_time < last_time)
-		cur_time = cur_time + last_time;
-
-	if(cur_time >= (last_time + throld))
-		return 1;
-	else if((cur_time >= (last_time + throld - 10)) && milis % 2) {
-		LED_K0_TOGGLE;
-		contine = 1;
-	}
-	return 0;
-}
-
 
 //################################MAIN############################################
 
@@ -175,25 +172,8 @@ while(1)
 
 	if(i==8)	{W12_EIN;W13_AUS;}
 
-#if 0
-	if((!TS0 && !(m_flanke & 1)) || (!TS0 && contine)) {
-		_delay_ms(100);
-		m_flanke |= 1; 
-		K0_TOGGLE; LED_K0_TOGGLE;KS11_AUS;KS21_AUS;KS22_AUS;KS24_AUS;
-		m_time = sek;
-		contine = 0;
-		_delay_ms(255);
-	}
-	if( TS0 && (m_flanke & 1)) 
-		m_flanke &= 0xfe;
-#else
-	if(TS0){	
-		if(delay_ms(3,&merker[4])) {
-		K0_TOGGLE; LED_K0_TOGGLE;KS11_AUS;KS21_AUS;KS22_AUS;KS24_AUS;
-		}
-	}
-	else merker[4].flanke = 0;
-#endif
+	if(TS0){	if(delay_ms(3,&merker[4]))	{K0_TOGGLE; LED_K0_TOGGLE; KS11_AUS;KS21_AUS;KS22_AUS;KS24_AUS;}}
+	else		merker[4].flanke = 0;
 
 //Problem: flanke wird nur zum Zeit aufziehen verwendet aber nicht das der Taster dauerhaft gedrückt wird
 	if(TS11){	if(delay_ms(3,&merker[0]))	{KS11_TOGGLE;LED_K0_AUS;K0_AUS;}}
@@ -208,12 +188,21 @@ while(1)
 	if(TS24){	if(delay_ms(3,&merker[3]))	{KS24_TOGGLE;LED_K0_AUS;K0_AUS;}}
 	else		merker[3].flanke = 0;
 
-#if 0	//Rangierfahrt nach einer bestimmten Zeit beenden
-	if(compareTime(120, sek, m_time)) {
-		K0_AUS;
-		LED_K0_AUS;
+	//if(!K0_STATE){	{KS11_EIN;}}
+	//if(K0_STATE){	{KS11_AUS;}}
+
+	if(!K0_STATE){	
+		unsigned char tmp = delay_s(120,&merker[5]);
+		if(tmp) {K0_AUS;}
+		//LED Toggeln geht noch nicht!!! 9.9.22 noch nicht im git!!!
+		//if(!merker[5].warn && sek % 2) LED_K0_TOGGLE;
 	}
-#endif
+
+				//if(delay_s(59,&merker[5]))	{LED_K0_AUS;K0_AUS;KS11_EIN;}}
+	else		merker[5].flanke = 0;
+	
+	//else LED_K0_AUS;
+	
 	
 }
 
