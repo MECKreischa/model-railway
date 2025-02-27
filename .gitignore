@@ -1,5 +1,11 @@
 *.hex
 *.aps
 *.aws
+*.elf
+*.lss
+*.eep
+*.lst
+*.o
+*.sym
 default/
 Archiv/
