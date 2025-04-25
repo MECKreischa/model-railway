@@ -128,7 +128,7 @@ void setup() {
   Taster4.SetPin(E_A7);
 
   SPI.begin();
-  //SPI.transfer(value);
+  SPI.transfer(5);
   
   wdt_enable(WDTO_2S);  //Watchdog enable mit 2sekunden
 }
@@ -163,21 +163,25 @@ void loop()
   {
       Serial.println("Taster1");
       digitalWrite(A_D3, !digitalRead(A_D3)); //Toggle Ausgang
+      SPI.transfer(1);
   }
   if(Taster2.isTrue(currentMillis) == 1)   //Flanke Taster Signal
   {
       Serial.println("Taster2");
       digitalWrite(A_D4, !digitalRead(A_D4)); //Toggle Ausgang
+      SPI.transfer(5);
   }
   if(Taster3.isTrue(currentMillis) == 1)   //Flanke Taster Signal
   {
       Serial.println("Taster3");
       digitalWrite(A_D5, !digitalRead(A_D5)); //Toggle Ausgang
+      SPI.transfer(5);
   }
   if(Taster4.isTrue(currentMillis) == 1)   //Flanke Taster Signal
   {
       Serial.println("Taster4");
       digitalWrite(A_D6, !digitalRead(A_D6)); //Toggle Ausgang
+      SPI.transfer(1);
   }
   /*
   if(analogRead(E_A7) > 100)
