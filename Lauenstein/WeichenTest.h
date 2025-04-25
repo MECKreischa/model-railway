@@ -20,7 +20,9 @@
 #define REL11_on (PORTA  |= (1<<7))
 #define REL12_on (PORTA  |= (1<<6))
 #define REL13_on (PORTA |= (1<<5))
-#define REL14_on (PORTA |= (1<<4))
+#define REL14_on (PORTA |= (1<<4)) // nicht belegt
+#define REL15_on (PORTA |= (1<<3)) // geht zu Relais 15 aber durchgekratzt?
+#define REL16_on (PORTA |= (1<<2)) // geht zu Relais 16 aber durchgekratzt?
 #define REL2_on (PORTA |= (1<<1))
 #define REL1_on (PORTA |= (1<<0))
 
@@ -36,7 +38,9 @@
 #define REL11_off (PORTA &= ~(1<<7))
 #define REL12_off (PORTA &= ~(1<<6))
 #define REL13_off (PORTA &= ~(1<<5))
-#define REL14_off (PORTA &= ~(1<<4))
+#define REL14_off (PORTA &= ~(1<<4)) // nicht belegt
+#define REL15_off (PORTA &= ~(1<<3)) // geht zu Relais 15 aber durchgekratzt?
+#define REL16_off (PORTA &= ~(1<<2)) // geht zu Relais 16 aber durchgekratzt?
 #define REL2_off (PORTA &= ~(1<<1))
 #define REL1_off (PORTA &= ~(1<<0))
 
@@ -53,9 +57,10 @@
 #define S17  !(PINB & 1<<PB1)
 #define S16 !(PINB & 1<<PB2)
 #define S13 !(PINB & 1<<PB3)
-#define S12 !(PINB & 1<<PB4)
-#define S11 !(PINB & 1<<PB5)
-#define S15 !(PINB & 1<<PB6)
+#define S12 !(PINB & 1<<PB2)  // ToDo: from 4 to 2, Einfahrt von Schattenbhf in Hbf auf Digitalgleis
+#define S11 !(PINB & 1<<PB2)  // ToDo: from 5 to 2, Hängt an den Klemmen von theoretisch K15
+#define S15 !(PINB & 1<<PB2)  // ToDo: from 6 to 2, find new free Port
+#define SCK !(PINB & 1<<PB7) // SCK
 
 /*
 #define REL15_on (PORTA |= (1<<3))

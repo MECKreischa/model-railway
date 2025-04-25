@@ -17,8 +17,12 @@ void init(void)
 	DDRD = 0b00000000;	//EEEEEEEE
 	PORTD =0b11111111;	//PullUP R  an
 	
-	DDRB = 0b00000000;	//EEEEEEEE
-	PORTB =0b11111111;	//PullUP R  an
+	//DDRB = 0b00000000;	//EEEEEEEE
+	//PORTB =0b11111111;	//PullUP R  an
+
+	DDRB &= ~( (1<<PB0) | (1<<PB1) | (1<<PB2) | (1<<PB3) | (1<<PB4) | (1<<PB5) );  /* Eingaenge */
+	PORTB |= (1<<PB0) | (1<<PB1) | (1<<PB2) | (1<<PB3) | (1<<PB4) | (1<<PB5);      /* Interne Pull-Up einschalten */
+
 
 
 
@@ -27,7 +31,12 @@ void init(void)
 
 	DDRC = 0xFF;  //PORTC = Ausgang
 	PORTC= 0x00;		//LEDREL aus
-	
+
+	DDRB |= (1 << PB6);		//MISO output
+	//DDRB |= (1 << PB7);		//SCK output
+    //PORTB &= ~( (1<<PB6) | (1<<PB7));
+	SPCR |= (1 << SPE) | (1 << CPHA); //Slave, SPI enable
+
 
 }
 void warten()
@@ -40,6 +49,9 @@ main(void)
 
 //Initialisierung
 init();
+
+
+
 
 //Endlosschleife Programm
 while (1)
@@ -59,7 +71,9 @@ while (1)
 
 	if( S03 && S05)	{_delay_ms(255);if( S03 && S05 ){REL12_on;REL11_on;}}
 		
-
+    // Test SPI connection
+	if( SPDR == 1 ){REL12_off;REL11_on;}
+	if( SPDR == 5 ){REL12_on;REL11_off;}
 
 	if( S10 && S16)	{_delay_ms(255);if( S10 && S16 ){REL5_on;REL6_off;REL7_off;}}
 	if( S10 && S17)	{_delay_ms(255);if( S10 && S17 ){REL4_off;REL5_on;REL6_off;REL7_off;}}
